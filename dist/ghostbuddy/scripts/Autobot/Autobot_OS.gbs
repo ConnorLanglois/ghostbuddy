@@ -1,0 +1,10 @@
+; Autobot:1.0:OS:w:q:Basic bot-making script
+
+#include <Array.au3>
+#include '..\lib\OSScript.gbs'
+
+Func __Run()
+	_Wait()
+
+	$aText = _GetText(566, 168, 596, 190)
+EndFunc

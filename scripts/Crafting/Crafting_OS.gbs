@@ -1,0 +1,84 @@
+; Crafting:1.0:OS:w:q:Basic Al Kharid crafting script
+
+#include '..\lib\OSScript.gbs'
+
+Func __Run()
+	Global $bar = 'gold_bar'
+	Global $jewellery = 'gold_amulet'
+
+   _SetMaxOffset(3)
+   _SetTime(1000, 2000)
+	_OpenInventory()
+	GoToBank()
+
+	While True
+		WithdrawBars()
+		GoToFurnace()
+		MakeJewellery()
+		GoToBank()
+		DepositJewellery()
+	WEnd
+EndFunc
+
+Func MakeJewellery()
+	_ClickItem($jewellery, 'game', 'secondary', 40)
+	_MakeAll()
+	_OpenInventory()
+
+	While _Item($bar, 'menu', 30)
+		_Wait()
+		_OpenInventory()
+
+		If _Item('continue') Then
+			_RotateReset()
+			Smelt(200, 100)
+			MakeJewellery()
+		EndIf
+	WEnd
+EndFunc
+
+Func Smelt($iX, $iY)
+	_ClickItem($bar, 'menu', 'primary', 30)
+	_Click('secondary', $iX, $iY)
+	_Furnace()
+EndFunc
+
+Func WithdrawBars()
+	_TabAll()
+
+	If Not _ClickItem($bar, 'game', 'secondary', 30) Then
+		_ScrollDown()
+
+		While Not _ClickItem($bar, 'game', 'secondary', 30)
+			_Wait(0.5)
+		WEnd
+	EndIf
+
+	_ScrollStop()
+	_WithdrawAll()
+	_Close()
+EndFunc
+
+Func DepositJewellery()
+	_TabAll()
+	_ClickItem($jewellery, 'menu', 'secondary', 40)
+	_DepositAll()
+EndFunc
+
+Func GoToBank()
+	_Run()
+	_RotateReset()
+	_RotatePitch(-45)
+	_RotateYaw(180)
+	_Click('secondary', 415, 25)
+	_Bank()
+	_WaitItem('close', -1, 'game', 30)
+EndFunc
+
+Func GoToFurnace()
+	_Run()
+	_RotateReset()
+	_RotatePitch(-45)
+	Smelt(375, 10)
+	_WaitItem('close', -1, 'game', 30)
+EndFunc

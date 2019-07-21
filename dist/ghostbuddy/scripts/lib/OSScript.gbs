@@ -1,0 +1,70 @@
+#include-once
+
+#include 'Script.gbs'
+
+Func _OpenInventory()
+	_ClickItem('inventory', 'menu')
+EndFunc
+
+Func _Furnace()
+	_ClickItem('furnace')
+EndFunc
+
+Func _MakeAll()
+	_ClickItem('make_all')
+EndFunc
+
+Func _Bank()
+	_ClickItem('bank')
+EndFunc
+
+Func _TabAll()
+	_ClickItem('tab_all', 'game')
+EndFunc
+
+Func _DepositAll()
+	_ClickItem('deposit_all')
+EndFunc
+
+Func _WithdrawAll()
+	_ClickItem('withdraw_all')
+EndFunc
+
+Func _Run()
+	_ClickItem('run')
+EndFunc
+
+Func _RotateReset()
+	_ClickOffsetItem('compass', 30, 8)
+EndFunc
+
+Func _ScrollDown()
+	_ClickItem('down_arrow', 'game', 'primary', 0, 'down')
+EndFunc
+
+Func _ScrollUp()
+	_ClickItem('up_arrow', 'game', 'primary', 0, 'down')
+EndFunc
+
+Func _ScrollStop()
+	MouseUp('primary')
+EndFunc
+
+Func _Close()
+	_ClickItem('close', 'game')
+EndFunc
+
+Func __Coords($sArea)
+	Switch $sArea
+	Case 'chat'
+		Local $aCoords = [30, 345, 539, 501]
+	Case 'game'
+		Local $aCoords = [29, 4, 540, 337]
+	Case 'map'
+		Local $aCoords = [544, 0, 773, 167]
+	Case 'menu'
+		Local $aCoords = [547, 168, 787, 502]
+	EndSwitch
+
+	Return $aCoords
+EndFunc

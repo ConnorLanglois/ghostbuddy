@@ -1,0 +1,236 @@
+#include-once
+
+#include <MetroGUI_UDF.au3>
+#include <File.au3>
+#include <ImageSearch2015.au3>
+#include <Tesseract.au3>
+
+Local $sWndTitle = $CmdLine[3] = 'OS' ? 'Old School RuneScape' : 'RuneScape'
+Local $hWnd
+
+Local $iMaxOffset = 0
+
+Local $iMinTime = 0
+Local $iMaxTime = 0
+
+_Main()
+
+Func _Main()
+	_Init()
+	__Run()
+EndFunc
+
+Func _Init()
+	HotKeySet($CmdLine[5], '_Exit')
+	_TesseractPathSet(@WorkingDir & '\lib\Tesseract\tesseract.exe')
+	DirCreate('temp\lib\Tesseract')
+	_TesseractTempPathSet(@WorkingDir & '\temp\lib\Tesseract')
+	AutoItSetOption('MouseCoordMode', 2)
+	DllCall('user32.dll', 'bool', 'SetProcessDPIAware')
+	_Metro_EnableHighDPIScaling()
+	_Window_Attach()
+EndFunc
+
+Func _RotatePitch($degrees)
+	Local $key = $degrees > 0 ? 'UP' : 'DOWN'
+
+	Send('{' & $key & ' down}')
+	Sleep(Abs($degrees) / 97 * 1000)
+	Send('{' & $key & ' up}')
+	_SleepRandom()
+EndFunc
+
+Func _RotateYaw($degrees)
+	Local $key = $degrees > 0 ? 'LEFT' : 'RIGHT'
+
+	Send('{' & $key & ' down}')
+	Sleep(Abs($degrees) / 97 * 1000)
+	Send('{' & $key & ' up}')
+	_SleepRandom()
+EndFunc
+
+Func _GetText($iX1 = 0, $iY1 = 0, $iX2 = _Window_GetPos()[2], $iY2 = _Window_GetPos()[3])
+	$aWndPos = _Window_GetPos()
+
+	_TesseractWinCapture(_Window_GetHandle(), '', 0, @CRLF, 0, 2, 'eng', 3, $iX1, $iY1, $iX2, $iY2, 1)
+EndFunc
+
+Func _ClickItem($sItem, $sArea = 'all', $sButton = 'primary', $iVariation = 0, $sMode = 'click')
+	Return _ClickImage(__ToImage($sItem), $sArea, $sButton, $iVariation, $sMode)
+EndFunc
+
+Func _ClickOffsetItem($sItem, $iXOffset, $iYOffset, $sArea = 'all', $sButton = 'primary', $iVariation = 0, $sMode = 'click')
+	Return _ClickOffsetImage(__ToImage($sItem), $iXOffset, $iYOffset, $sArea, $sButton, $iVariation, $sMode)
+EndFunc
+
+Func _WaitItem($sItem, $iTimeout = 10, $sArea = 'all', $iVariation = 0)
+	Return _WaitImage(__ToImage($sItem), $iTimeout, $sArea, $iVariation)
+EndFunc
+
+Func _Item($sItem, $sArea = 'all', $iVariation = 0)
+	Return _Image(__ToImage($sItem), $sArea, $iVariation)
+EndFunc
+
+Func _FindItem($sItem, ByRef $iX, ByRef $iY, $sArea = 'all', $iVariation = 0)
+	Return _FindImage(__ToImage($sItem), $iX, $iY, $sArea, $iVariation)
+EndFunc
+
+Func _ClickImage($sImagePath, $sArea = 'all', $sButton = 'primary', $iVariation = 0, $sMode = 'click')
+	Return _ClickOffsetImage($sImagePath, 0, 0, $sArea, $sButton, $iVariation, $sMode)
+EndFunc
+
+Func _ClickOffsetImage($sImagePath, $iXOffset, $iYOffset, $sArea = 'all', $sButton = 'primary', $iVariation = 0, $sMode = 'click')
+	Local $iX
+	Local $iY
+
+	If _FindImage($sImagePath, $iX, $iY, $sArea, $iVariation) Then
+		AutoItSetOption('MouseCoordMode', 1)
+		MouseMove($iX + $iXOffset, $iY + $iYOffset)
+
+		Switch $sMode
+			Case 'click'
+				MouseClick($sButton)
+				
+			Case 'down'
+				MouseDown($sButton)
+
+			Case Else
+				AutoItSetOption('MouseCoordMode', 2)
+
+			Return False
+		EndSwitch
+
+		AutoItSetOption('MouseCoordMode', 2)
+		_SleepRandom()
+
+		Return True
+	EndIf
+
+	Return False
+EndFunc
+
+Func _WaitImage($sImagePath, $iTimeout = 10, $sArea = 'all', $iVariation = 0)
+	$hTimer = TimerInit()
+
+	While TimerDiff($hTimer) < $iTimeout * 1000 Or $iTimeout = -1
+		If _Image($sImagePath, $sArea, $iVariation) Then
+			_SleepRandom()
+
+			Return True
+		EndIf
+
+		Sleep(100)
+	WEnd
+
+	_SleepRandom()
+
+	Return False
+EndFunc
+
+Func _Image($sImagePath, $sArea = 'all', $iVariation = 0)
+	Local $iX
+	Local $iY
+
+	Return _FindImage($sImagePath, $iX, $iY, $sArea, $iVariation)
+EndFunc
+
+Func _FindImage($sImagePath, ByRef $iX, ByRef $iY, $sArea = 'all', $iVariation = 0)
+	If Not _Window_IsActive() Then
+		Return
+	EndIf
+
+	Local $aWndPos = _Window_GetPos()
+
+	Local $iX1 = $aWndPos[0]
+	Local $iY1 = $aWndPos[1]
+	Local $iX2 = $aWndPos[0] + $aWndPos[2]
+	Local $iY2 = $aWndPos[1] + $aWndPos[3]
+
+	Local $iXTemp
+	Local $iYTemp
+
+	If $sArea <> 'all' Then
+		Local $aCoords = __Coords($sArea)
+
+		$iX1 = $aWndPos[0] + $aCoords[0]
+		$iY1 = $aWndPos[1] + $aCoords[1]
+		$iX2 = $aWndPos[0] + $aCoords[2]
+		$iY2 = $aWndPos[1] + $aCoords[3]
+	EndIf
+
+	If _ImageSearchArea(_PathFull($sImagePath, @ScriptDir), 1, $iX1, $iY1, $iX2, $iY2, $iXTemp, $iYTemp, $iVariation) And ($iXTemp <> 0 Or $iYTemp <> 0) Then
+		$iX = $iXTemp + Random(-$iMaxOffset, $iMaxOffset, 1)
+		$iY = $iYTemp + Random(-$iMaxOffset, $iMaxOffset, 1)
+
+		Return True
+	Else
+		Return SetError(1, 0, False)
+	EndIf
+EndFunc
+
+Func _Click($sButton, $iX, $iY, $iClicks = 1, $iSpeed = 10)
+	MouseClick($sButton, $iX, $iY, $iClicks, $iSpeed)
+	_SleepRandom()
+EndFunc
+
+Func _Wait($iDelay = 1)
+	Sleep($iDelay * 1000)
+EndFunc
+
+Func _MsgBox($iFlag, $sTitle, $sText, $iTimeout = 0)
+	Local $hParentWnd = WinExists($sWndTitle) ? $hWnd : WinExists('GhostBuddy') ? WinGetHandle('GhostBuddy') : ''
+
+	Return _MsgBoxEx($iFlag, $sTitle, $sText, $iTimeout, $hParentWnd)
+EndFunc
+
+Func _MsgBoxEx($iFlag, $sTitle, $sText, $iTimeout = 0, $hParentWnd = '')
+	Return _Metro_MsgBox($iFlag, $sTitle, $sText, 600, 11, $hParentWnd, $iTimeout)
+EndFunc
+
+Func _SleepRandom()
+	Sleep(Random($iMinTime, $iMaxTime))
+EndFunc
+
+Func _SetMaxOffset($iMaxOffsetTemp)
+	$iMaxOffset = $iMaxOffsetTemp
+EndFunc
+
+Func _SetTime($iMinTimeTemp, $iMaxTimeTemp)
+	$iMinTime = $iMinTimeTemp
+	$iMaxTime = $iMaxTimeTemp
+EndFunc
+
+Func _Window_Attach()
+	$hWnd = WinWait($sWndTitle, '',	60)
+
+	WinActivate($hWnd)
+
+	If $hWnd = 0 Or WinWaitActive($hWnd, '', 5) = 0 Then
+		_MsgBox($MB_OK, 'ERROR', 'Could not open game window', 10)
+		_Exit()
+	EndIf
+
+	_MsgBox($MB_OK, 'SUCCESS', 'Script started successfully!', 3)
+EndFunc
+
+Func _Window_IsActive()
+	Return WinActive($hWnd)
+EndFunc
+
+Func _Window_GetPos()
+	Return WinGetPos($hWnd)
+EndFunc
+
+Func _Window_GetHandle()
+	Return $hWnd
+EndFunc
+
+Func _Exit()
+	_MsgBox($MB_OK, 'SUCCESS', 'Script ended successfully!', 3)
+
+	Exit
+EndFunc
+
+Func __ToImage($sItem)
+	Return '..\..\temp\items\' &	$sItem & '.png'
+EndFunc
